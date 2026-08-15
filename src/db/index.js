@@ -4,10 +4,11 @@ export const db = new Dexie('FreshGuardDB');
 
 db.version(1).stores({
   items: '++id, name, barcode, expiryDate, category, createdAt',
-  settings: 'key, value'
+  settings: 'key, value',
+  feedbacks: '++id, type, title, content, createdAt'
 });
 
-// 초기 설정 로드 함수 (가짜 샘플 데이터 제거됨)
+// 초기 설정 로드 함수
 export async function initDatabase() {
   const settingsCount = await db.settings.count();
   if (settingsCount === 0) {

@@ -1,11 +1,12 @@
 import React from 'react';
-import { ShieldCheck, Plus, Bell, Sun, Moon, QrCode, Database } from 'lucide-react';
+import { ShieldCheck, Plus, Bell, Sun, Moon, QrCode, Database, MessageSquareHeart } from 'lucide-react';
 
 export default function Header({ 
   onOpenAddModal, 
   onOpenScanModal, 
   onOpenSettingsModal,
   onOpenBackupModal,
+  onOpenFeedbackModal,
   theme,
   setTheme,
   urgentCount
@@ -73,7 +74,18 @@ export default function Header({
           style={{ borderColor: 'rgba(16, 185, 129, 0.4)' }}
         >
           <Database size={18} color="#10b981" />
-          <span style={{ color: '#10b981', fontWeight: 600 }}>DB 백업/복원</span>
+          <span style={{ color: '#10b981', fontWeight: 600 }}>DB 백업</span>
+        </button>
+
+        {/* 버그 및 요청사항 버튼 */}
+        <button
+          onClick={onOpenFeedbackModal}
+          className="btn-secondary"
+          title="버그 제보 및 기능 요청"
+          style={{ borderColor: 'rgba(139, 92, 246, 0.4)' }}
+        >
+          <MessageSquareHeart size={18} color="#a855f7" />
+          <span style={{ color: '#a855f7', fontWeight: 600 }}>버그/요청</span>
         </button>
 
         {/* 무료 알림 설정 버튼 */}

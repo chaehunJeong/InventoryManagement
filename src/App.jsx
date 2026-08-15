@@ -13,6 +13,7 @@ import AddItemModal from './components/AddItemModal';
 import BarcodeScannerModal from './components/BarcodeScannerModal';
 import NotificationSettingsModal from './components/NotificationSettingsModal';
 import BackupRestoreModal from './components/BackupRestoreModal';
+import FeedbackModal from './components/FeedbackModal';
 
 export default function App() {
   const [theme, setTheme] = useState('dark');
@@ -24,6 +25,7 @@ export default function App() {
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   // Dexie 데이터베이스 실시간 바인딩
   const items = useLiveQuery(() => db.items.toArray(), []) || [];
@@ -37,7 +39,6 @@ export default function App() {
     const bootstrap = async () => {
       await initDatabase();
       
-      // 처음 가짜 데이터를 비우는 로직 (1회성 처리)
       const sampleCleaned = localStorage.getItem('freshguard_sample_cleaned');
       if (!sampleCleaned) {
         await db.items.clear();
@@ -48,7 +49,6 @@ export default function App() {
     };
     bootstrap();
   }, []);
-
 
   // 테마 적용
   useEffect(() => {
@@ -99,7 +99,6 @@ export default function App() {
   const handleScanSuccess = async (barcodeText) => {
     setIsScanModalOpen(false);
     
-    // 바코드 기반 정보 조회
     const info = await lookupBarcodeInfo(barcodeText);
 
     setEditingItem(null);
@@ -122,6 +121,7 @@ export default function App() {
         onOpenScanModal={() => setIsScanModalOpen(true)}
         onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
         onOpenBackupModal={() => setIsBackupModalOpen(true)}
+        onOpenFeedbackModal={() => setIsFeedbackModalOpen(true)}
         theme={theme}
         setTheme={setTheme}
         urgentCount={urgentCount}
@@ -181,6 +181,13 @@ export default function App() {
           onRestoreSuccess={() => {
             checkAndSendExpiryNotifications(true);
           }}
+        />
+      )}
+
+      {/* Bug & Feature Request Modal */}
+      {isFeedbackModalOpen && (
+        <FeedbackModal
+          onClose={() => setIsFeedbackModalOpen(false)}
         />
       )}
     </div>
