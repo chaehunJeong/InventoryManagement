@@ -36,10 +36,19 @@ export default function App() {
   useEffect(() => {
     const bootstrap = async () => {
       await initDatabase();
+      
+      // 처음 가짜 데이터를 비우는 로직 (1회성 처리)
+      const sampleCleaned = localStorage.getItem('freshguard_sample_cleaned');
+      if (!sampleCleaned) {
+        await db.items.clear();
+        localStorage.setItem('freshguard_sample_cleaned', 'true');
+      }
+
       await checkAndSendExpiryNotifications(false);
     };
     bootstrap();
   }, []);
+
 
   // 테마 적용
   useEffect(() => {
