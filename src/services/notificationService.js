@@ -2,8 +2,6 @@ import { db } from '../db';
 
 /**
  * 유통기한 D-Day 및 상태 계산
- * @param {string} expiryDateStr - YYYY-MM-DD
- * @param {number} warningDays - 경고 기준 일수 (기본 3일)
  */
 export function getDDayStatus(expiryDateStr, warningDays = 3) {
   if (!expiryDateStr) return { status: 'safe', dDay: 999, label: '미정' };
@@ -73,7 +71,7 @@ export async function sendDiscordNotification(webhookUrl, title, messageItems) {
     const embeds = [
       {
         title: `🚨 ${title}`,
-        color: 15158332, // Red/Orange color
+        color: 15158332,
         fields: messageItems.map(item => ({
           name: `${item.name} (${item.quantity}개)`,
           value: `📅 유통기한: **${item.expiryDate}** (${item.statusLabel})\n📍 메모: ${item.memo || '없음'}`,
@@ -103,7 +101,59 @@ export async function sendDiscordNotification(webhookUrl, title, messageItems) {
 }
 
 /**
- * 임박 재고 전체 체크 및 무료 알림 전송 (앱 로드 또는 백그라운드 체크 시 실행)
+ * KakaoTalk "나에게 메시지 보내기" API 전송 (무료)
+ * @param {string} accessToken - 카카오 액세스 토큰
+ * @param {Array} messageItems 
+ */
+export async function sendKakaoTalkNotification(accessToken, messageItems) {
+  if (!accessToken) return false;
+
+  try {
+    const summaryText = messageItems.slice(0, 3).map(item => `• ${item.name} (${item.statusLabel})`).join('\n');
+    const extraText = messageItems.length > 3 ? `\n외 ${messageItems.length - 3}건 더 있음` : '';
+
+    const templateObject = {
+      object_type: 'feed',
+      content: {
+        title: `🚨 FreshGuard 유통기한 임박 알림 (${messageItems.length}건)`,
+        description: `${summaryText}${extraText}\n\n냉장고와 팬트리를 확인해 주세요!`,
+        image_url: 'https://cdn-icons-png.flaticon.com/512/3081/3081986.png',
+        link: {
+          web_url: window.location.origin,
+          mobile_web_url: window.location.origin
+        }
+      },
+      buttons: [
+        {
+          title: '재고 관리 앱으로 이동',
+          link: {
+            web_url: window.location.origin,
+            mobile_web_url: window.location.origin
+          }
+        }
+      ]
+    };
+
+    const response = await fetch('https://kapi.kakao.com/v2/api/talk/memo/default/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Bearer ${accessToken.trim()}`
+      },
+      body: new URLSearchParams({
+        template_object: JSON.stringify(templateObject)
+      })
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error('카카오톡 메시지 전송 실패:', error);
+    return false;
+  }
+}
+
+/**
+ * 임박 재고 전체 체크 및 무료 알림 전송
  */
 export async function checkAndSendExpiryNotifications(force = false) {
   const settingsList = await db.settings.toArray();
@@ -112,11 +162,11 @@ export async function checkAndSendExpiryNotifications(force = false) {
   const warningDays = Number(settingsMap.warningDays || 3);
   const enableBrowserNotif = settingsMap.enableBrowserNotif ?? true;
   const discordWebhookUrl = settingsMap.discordWebhookUrl || '';
+  const kakaoAccessToken = settingsMap.kakaoAccessToken || '';
   const lastCheckedDate = settingsMap.lastCheckedDate || '';
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // 하루에 한 번만 실행 (force가 true가 아닌 경우)
   if (!force && lastCheckedDate === todayStr) {
     return { checked: false, reason: 'already_checked_today' };
   }
@@ -140,7 +190,7 @@ export async function checkAndSendExpiryNotifications(force = false) {
     return { checked: true, alertCount: 0 };
   }
 
-  // 1. 브라우저 로컬 알림 발송
+  // 1. 브라우저/스마트폰 알림
   if (enableBrowserNotif && Notification.permission === 'granted') {
     const title = `FreshGuard 유통기한 임박 알림 (${urgentItems.length}건)`;
     const bodyText = urgentItems.slice(0, 3).map(i => `${i.name}: ${i.statusLabel}`).join('\n') + 
@@ -149,12 +199,16 @@ export async function checkAndSendExpiryNotifications(force = false) {
     triggerLocalNotification(title, bodyText);
   }
 
-  // 2. 디스코드 Webhook 발송 (설정되어 있는 경우)
+  // 2. 디스코드 Webhook
   if (discordWebhookUrl) {
     await sendDiscordNotification(discordWebhookUrl, '유통기한 체크 리포트', urgentItems);
   }
 
-  // 마지막 체크 날짜 갱신
+  // 3. 카카오톡 메시지
+  if (kakaoAccessToken) {
+    await sendKakaoTalkNotification(kakaoAccessToken, urgentItems);
+  }
+
   await db.settings.put({ key: 'lastCheckedDate', value: todayStr });
 
   return { checked: true, alertCount: urgentItems.length, urgentItems };
