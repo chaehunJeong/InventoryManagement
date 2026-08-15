@@ -1,0 +1,17 @@
+{
+  "short_name": "FreshGuard",
+  "name": "FreshGuard - 재고 & 무료 유통기한 알림 솔루션",
+  "description": "바코드 스캔 및 100% 무료 유통기한 임박 알림 솔루션",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512 192x192 64x64 32x32"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "display": "standalone",
+  "orientation": "portrait"
+}
